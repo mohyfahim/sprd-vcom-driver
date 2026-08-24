@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodic DWR-910M LTE registration query
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=60s
+AccuracySec=5s
+Unit=sprd-cell-poll.service
+
+[Install]
+WantedBy=timers.target
