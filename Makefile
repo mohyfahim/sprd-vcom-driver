@@ -3,6 +3,7 @@ obj-m := sprd_vcom.o
 else
 
 KDIR ?= /lib/modules/$(shell uname -r)/build
+
 PWD  := $(shell pwd)
 
 .PHONY: all clean install uninstall
@@ -17,10 +18,8 @@ install: all
 	install -D -m 0644 sprd_vcom.ko \
 		/lib/modules/$(shell uname -r)/extra/sprd_vcom.ko
 	depmod -a
-	install -D -m 0644 99-sprd-vcom.rules \
-		/etc/udev/rules.d/99-sprd-vcom.rules
- 	install -D -m 0644 99-unisoc-at-ignore.rules \
-        /etc/udev/rules.d/99-unisoc-at-ignore.rules
+	install -D -m 0644 99-sprd-vcom.rules /etc/udev/rules.d/99-sprd-vcom.rules
+	install -D -m 0644 99-unisoc-at-ignore.rules /etc/udev/rules.d/99-unisoc-at-ignore.rules
 	install -D -m 0644 sprd_vcom.conf \
 		/etc/modules-load.d/sprd_vcom.conf
 	udevadm control --reload-rules || true
