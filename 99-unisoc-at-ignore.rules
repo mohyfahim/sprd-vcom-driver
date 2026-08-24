@@ -1,0 +1,4 @@
+SUBSYSTEM=="tty", \
+ATTRS{idVendor}=="1782", \
+ATTRS{idProduct}=="000c", \
+ENV{ID_MM_PORT_IGNORE}="1"

@@ -19,6 +19,8 @@ install: all
 	depmod -a
 	install -D -m 0644 99-sprd-vcom.rules \
 		/etc/udev/rules.d/99-sprd-vcom.rules
+ 	install -D -m 0644 99-unisoc-at-ignore.rules \
+        /etc/udev/rules.d/99-unisoc-at-ignore.rules
 	install -D -m 0644 sprd_vcom.conf \
 		/etc/modules-load.d/sprd_vcom.conf
 	udevadm control --reload-rules || true
