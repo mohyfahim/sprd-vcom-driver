@@ -3,7 +3,10 @@
 ACTION!="add|change|move|bind", GOTO="sprd_vcom_end"
 SUBSYSTEM!="tty", GOTO="sprd_vcom_end"
 KERNEL!="ttyUSB*", GOTO="sprd_vcom_end"
-DRIVERS!="sprd_vcom", GOTO="sprd_vcom_end"
+DRIVERS=="sprd_vcom", GOTO="sprd_vcom_links"
+GOTO="sprd_vcom_end"
+
+LABEL="sprd_vcom_links"
 
 # Compatibility link. It is ambiguous when multiple modems are connected.
 SYMLINK+="sprd-at"
