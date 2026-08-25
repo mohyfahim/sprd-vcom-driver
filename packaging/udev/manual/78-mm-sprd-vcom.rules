@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: GPL-2.0
+# Default profile: reserve verified sprd_vcom AT ports for manual tools.
+ACTION!="add|change|move|bind", GOTO="mm_sprd_vcom_end"
+
+SUBSYSTEMS=="usb", ATTRS{bInterfaceNumber}=="?*", ENV{.MM_USBIFNUM}="$attr{bInterfaceNumber}"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1782", ATTRS{idProduct}=="000c", ENV{.MM_USBIFNUM}=="02", ENV{ID_MM_PORT_IGNORE}="1"
+
+LABEL="mm_sprd_vcom_end"

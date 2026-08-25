@@ -2,35 +2,81 @@ ifneq ($(KERNELRELEASE),)
 obj-m := sprd_vcom.o
 else
 
-KDIR ?= /lib/modules/$(shell uname -r)/build
+KERNEL_RELEASE ?= $(shell uname -r)
+KDIR ?= /lib/modules/$(KERNEL_RELEASE)/build
+BUILD_DIR ?= $(CURDIR)/build
+HOSTCC ?= cc
+HOSTCFLAGS ?= -O2 -g
+WARN_CFLAGS := -std=c11 -Wall -Wextra -Wpedantic -Wconversion -Wshadow
+TOOL := $(BUILD_DIR)/sprd-at-tty
 
-PWD  := $(shell pwd)
+DESTDIR ?=
+PREFIX ?= /usr/local
+MODULE_DIR ?= /lib/modules/$(KERNEL_RELEASE)/extra
+UDEV_RULES_DIR ?= /etc/udev/rules.d
+MODE ?= manual
 
-.PHONY: all clean install uninstall
+.PHONY: all module tools check clean install uninstall
+.PHONY: dkms-install dkms-uninstall
 
-all:
-	$(MAKE) -C $(KDIR) M=$(PWD) modules
+all: module tools
+
+module:
+	$(MAKE) -C $(KDIR) M=$(CURDIR) modules
+
+tools: $(TOOL)
+
+$(TOOL): tools/sprd-at-tty.c
+	mkdir -p $(BUILD_DIR)
+	$(HOSTCC) $(HOSTCFLAGS) $(WARN_CFLAGS) $< -o $@
+
+check:
+	$(MAKE) -C $(KDIR) M=$(CURDIR) W=1 modules
+	$(MAKE) -B HOSTCFLAGS="$(HOSTCFLAGS) -Werror" tools
+	./tests/run-tests.sh
 
 clean:
-	$(MAKE) -C $(KDIR) M=$(PWD) clean
+	$(MAKE) -C $(KDIR) M=$(CURDIR) clean
+	rm -f $(TOOL)
+	rmdir $(BUILD_DIR) 2>/dev/null || true
 
 install: all
+	@case "$(MODE)" in manual|modemmanager) ;; *) \
+		echo "MODE must be manual or modemmanager" >&2; exit 2;; esac
 	install -D -m 0644 sprd_vcom.ko \
-		/lib/modules/$(shell uname -r)/extra/sprd_vcom.ko
-	depmod -a
-	install -D -m 0644 99-sprd-vcom.rules /etc/udev/rules.d/99-sprd-vcom.rules
-	install -D -m 0644 99-unisoc-at-ignore.rules /etc/udev/rules.d/99-unisoc-at-ignore.rules
-	install -D -m 0644 sprd_vcom.conf \
-		/etc/modules-load.d/sprd_vcom.conf
-	udevadm control --reload-rules || true
-	modprobe sprd_vcom
+		$(DESTDIR)$(MODULE_DIR)/sprd_vcom.ko
+	install -D -m 0755 $(TOOL) \
+		$(DESTDIR)$(PREFIX)/bin/sprd-at-tty
+	install -D -m 0644 packaging/udev/99-sprd-vcom.rules \
+		$(DESTDIR)$(UDEV_RULES_DIR)/99-sprd-vcom.rules
+	install -D -m 0644 packaging/udev/$(MODE)/78-mm-sprd-vcom.rules \
+		$(DESTDIR)$(UDEV_RULES_DIR)/78-mm-sprd-vcom.rules
+	@if [ -z "$(DESTDIR)" ]; then \
+		rm -f /etc/udev/rules.d/99-unisoc-at-ignore.rules \
+			/etc/modules-load.d/sprd_vcom.conf; \
+		depmod -a "$(KERNEL_RELEASE)"; \
+		udevadm control --reload-rules || true; \
+		modprobe sprd_vcom; \
+	fi
 
 uninstall:
-	modprobe -r sprd_vcom || true
-	rm -f /lib/modules/$(shell uname -r)/extra/sprd_vcom.ko
-	rm -f /etc/udev/rules.d/99-sprd-vcom.rules
+	@if [ -n "$(DESTDIR)" ]; then \
+		echo "uninstall does not support DESTDIR" >&2; exit 2; \
+	fi
+	-modprobe -r sprd_vcom
+	rm -f $(MODULE_DIR)/sprd_vcom.ko
+	rm -f $(PREFIX)/bin/sprd-at-tty
+	rm -f $(UDEV_RULES_DIR)/99-sprd-vcom.rules
+	rm -f $(UDEV_RULES_DIR)/78-mm-sprd-vcom.rules
+	rm -f /etc/udev/rules.d/99-unisoc-at-ignore.rules
 	rm -f /etc/modules-load.d/sprd_vcom.conf
-	depmod -a
-	udevadm control --reload-rules || true
+	depmod -a "$(KERNEL_RELEASE)"
+	-udevadm control --reload-rules
+
+dkms-install:
+	./install-dkms.sh --mode=$(MODE)
+
+dkms-uninstall:
+	./uninstall-dkms.sh
 
 endif

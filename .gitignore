@@ -5,3 +5,5 @@
 *.mod
 *.mod.c
 *.symvers
+/.cache.mk
+/build/

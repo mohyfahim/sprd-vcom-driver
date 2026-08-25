@@ -1,8 +1,0 @@
-[Unit]
-Description=Query DWR-910M LTE registration information
-After=dev-sprd\x2dat.device
-Wants=dev-sprd\x2dat.device
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/sbin/sprd-cell-poll

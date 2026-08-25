@@ -1,0 +1,8 @@
+config USB_SERIAL_SPRD_VCOM
+	tristate "UNISOC SPRD VCOM AT support"
+	help
+	  Say Y here if you need the vendor-specific AT command port on
+	  supported UNISOC SPRD VCOM modems.
+
+	  To compile this driver as a module, choose M here: the module will
+	  be called sprd_vcom.

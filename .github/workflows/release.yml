@@ -1,0 +1,29 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify version and create source archive
+        run: |
+          version=$(sed -n 's/^PACKAGE_VERSION="\([^"]*\)"/\1/p' dkms.conf)
+          test "v$version" = "$GITHUB_REF_NAME"
+          git archive --format=tar.gz \
+            --prefix="sprd-vcom-$version/" \
+            --output="sprd-vcom-$version.tar.gz" HEAD
+          sha256sum "sprd-vcom-$version.tar.gz" > SHA256SUMS
+      - name: Publish source artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes *.tar.gz SHA256SUMS

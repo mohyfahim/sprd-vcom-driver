@@ -1,0 +1,5 @@
+UNISOC SPRD VCOM USB SERIAL DRIVER
+M:	m.fahim <fahimohy@gmail.com>
+L:	linux-usb@vger.kernel.org
+S:	Maintained
+F:	drivers/usb/serial/sprd_vcom.c

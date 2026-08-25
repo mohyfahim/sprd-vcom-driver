@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: GPL-2.0
+[Unit]
+Description=Query UNISOC modem registration information
+ConditionPathExists=/usr/local/sbin/sprd-cell-poll
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/sprd-cell-poll

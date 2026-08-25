@@ -1,0 +1,61 @@
+name: Device support request
+description: Propose a hardware-verified VID/PID and AT interface.
+title: "[DEVICE] "
+labels: ["new-device"]
+body:
+  - type: markdown
+    attributes:
+      value: "Descriptor similarity is insufficient. Read docs/ADDING_DEVICES.md and sanitize all evidence."
+  - type: input
+    id: device
+    attributes:
+      label: Manufacturer, model, and hardware revision
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware revision
+    validations:
+      required: true
+  - type: input
+    id: usb
+    attributes:
+      label: VID:PID and verified AT interface
+      placeholder: "1782:000c, interface 2"
+    validations:
+      required: true
+  - type: textarea
+    id: descriptors
+    attributes:
+      label: Sanitized USB descriptors and endpoint layout
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: activation
+    attributes:
+      label: Activation sequence evidence
+      description: Include control requests, delays, halt handling, ZLP behavior, and how they were verified.
+    validations:
+      required: true
+  - type: textarea
+    id: transcript
+    attributes:
+      label: Sanitized AT transcript and reliability results
+      render: text
+    validations:
+      required: true
+  - type: checkboxes
+    id: acceptance
+    attributes:
+      label: Acceptance checklist
+      options:
+        - label: I tested this exact hardware and firmware.
+          required: true
+        - label: Networking remains bound to its original driver.
+          required: true
+        - label: Diagnostic and download interfaces remain unclaimed.
+          required: true
+        - label: I removed all personal and subscriber data.
+          required: true

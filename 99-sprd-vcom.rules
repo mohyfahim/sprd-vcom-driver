@@ -1,3 +1,0 @@
-# Stable name for the AT tty created by sprd_vcom.
-# The driver only binds 1782:000c MI_02, so matching by driver is sufficient.
-SUBSYSTEM=="tty", KERNEL=="ttyUSB*", DRIVERS=="sprd_vcom", SYMLINK+="sprd-at", MODE="0660", GROUP="dialout", TAG+="systemd"

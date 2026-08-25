@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: GPL-2.0
+# Device links for AT ports owned by sprd_vcom.
+ACTION!="add|change|move|bind", GOTO="sprd_vcom_end"
+SUBSYSTEM!="tty", GOTO="sprd_vcom_end"
+KERNEL!="ttyUSB*", GOTO="sprd_vcom_end"
+DRIVERS!="sprd_vcom", GOTO="sprd_vcom_end"
+
+# Compatibility link. It is ambiguous when multiple modems are connected.
+SYMLINK+="sprd-at"
+
+# Combine identity and topology when possible so duplicate USB serials do not
+# collide. Fall back to a path or the unique live tty name.
+ENV{ID_SERIAL_SHORT}=="?*", ENV{ID_PATH_TAG}=="?*", SYMLINK+="sprd/at-$env{ID_SERIAL_SHORT}-$env{ID_PATH_TAG}"
+ENV{ID_SERIAL_SHORT}=="?*", ENV{ID_PATH_TAG}!="?*", SYMLINK+="sprd/at-$env{ID_SERIAL_SHORT}-%k"
+ENV{ID_SERIAL_SHORT}!="?*", ENV{ID_PATH_TAG}=="?*", SYMLINK+="sprd/at-$env{ID_PATH_TAG}"
+ENV{ID_SERIAL_SHORT}!="?*", ENV{ID_PATH_TAG}!="?*", SYMLINK+="sprd/at-%k"
+
+LABEL="sprd_vcom_end"

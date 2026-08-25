@@ -1,266 +1,118 @@
-# sprd_vcom Linux driver for D-Link DWR-910M / UNISOC 1782:000c
+# UNISOC SPRD VCOM Linux driver
 
-This is a Linux USB-serial kernel module implementing the working startup
-sequence reverse-engineered from the official Windows `sprdvcom.sys` driver.
+`sprd_vcom` is a focused USB-serial driver for verified UNISOC/Spreadtrum
+modem AT interfaces. It enables debugging and standard modem control without
+claiming the modem's RNDIS, diagnostic, or firmware-download functions.
 
-## What it binds
+The initial supported device is the D-Link DWR-910M (`1782:000c`). Its port
+activation sequence was reverse-engineered from the official Windows
+`sprdvcom.sys` driver and verified using USB captures.
 
-Only:
+## Supported hardware
 
-    USB 1782:000c MI_02  = SPRD AT
-    bulk OUT 0x02
-    bulk IN  0x81
+| Device | USB ID | AT interface | Endpoints | Status |
+| --- | --- | ---: | --- | --- |
+| D-Link DWR-910M | `1782:000c` | 2 | IN `0x81`, OUT `0x02` | Hardware verified |
 
-It deliberately does NOT bind:
+Only explicitly listed interfaces bind. For the DWR-910M, interfaces 0/1
+remain available to `rndis_host`, interface 2 becomes a `ttyUSB` AT port, and
+interface 3 remains unclaimed by this driver.
 
-    MI_00/MI_01 = RNDIS
-    MI_03       = SPRD DIAG
+## Install with DKMS
 
-Therefore the normal RNDIS network connection remains managed by
-`rndis_host`.
+DKMS rebuilds the module after kernel upgrades. On Debian/Ubuntu:
 
-## Proven initialization
+```sh
+sudo apt install dkms build-essential linux-headers-$(uname -r)
+sudo ./install-dkms.sh
+```
 
-Each tty open performs:
+The default `manual` profile prevents ModemManager from taking the AT port.
+To opt into ModemManager detection and standard AT control:
 
-    CLEAR_FEATURE(ENDPOINT_HALT) OUT 0x02
-    CLEAR_FEATURE(ENDPOINT_HALT) IN  0x81
+```sh
+sudo ./install-dkms.sh --mode=modemmanager
+```
 
-    21 22 0000 0002 0000
-    21 22 0201 0002 0000
+Reconnect the modem after changing modes. The installer is idempotent and may
+be run from any directory.
 
-Then Linux's standard usb-serial generic bulk transport is used.
+Remove everything installed by the DKMS installer with:
 
-## Build requirements
+```sh
+sudo ./uninstall-dkms.sh
+```
 
-The running kernel must have USB serial support:
+## Build and test
 
-    CONFIG_USB_SERIAL=y
+```sh
+make
+make check
+```
 
-or:
+Useful targets include `module`, `tools`, `clean`, `install`,
+`dkms-install`, and `dkms-uninstall`. Override `KDIR` to build against another
+prepared kernel tree. `make install MODE=manual` installs for the current
+kernel only; use `MODE=modemmanager` for the opt-in profile. `DESTDIR` is
+supported for staged installation.
 
-    CONFIG_USB_SERIAL=m
+The maintained standalone compatibility baseline is Linux 5.10 and newer.
 
-Debian/Ubuntu:
+## Use the AT port
 
-    sudo apt install build-essential linux-headers-$(uname -r)
+The udev rules provide:
 
-For DKMS:
+- `/dev/sprd-at` as a compatibility link; it is ambiguous with multiple
+  modems.
+- `/dev/sprd/at-*` as a per-device link derived from USB serial or physical
+  path.
 
-    sudo apt install dkms build-essential linux-headers-$(uname -r)
+The client automatically selects a single unique port:
 
-## Recommended installation: DKMS
+```sh
+sprd-at-tty AT
+sprd-at-tty ATI 'AT+CSQ' 'AT+CEREG?'
+sprd-at-tty -l
+sprd-at-tty -d /dev/sprd/at-example 'AT+COPS?'
+```
 
-DKMS automatically rebuilds the module when the distribution kernel is
-upgraded.
+It exits nonzero on timeout, transport failure, disconnect, or a terminal
+modem error. Do not run it concurrently with ModemManager on the same AT port.
 
-From this directory:
+## ModemManager scope
 
-    sudo ./install-dkms.sh
+The opt-in profile tags this interface as the primary AT control port.
+Expected support includes device identity, signal, registration, and
+standard SIM/SMS operations implemented by the modem firmware.
 
-Reconnect the modem and verify:
+This does **not** promise that ModemManager can create or tear down a data
+bearer through the DWR-910M's vendor RNDIS implementation. RNDIS remains a
+separate network interface and managed bearer support requires additional
+hardware research. See [docs/MODEMMANAGER.md](docs/MODEMMANAGER.md).
 
-    dmesg | grep -i sprd
-    lsmod | grep sprd_vcom
-    ls -l /dev/sprd-at
+## Contributing device support
 
-Expected:
+Do not use the usb-serial `new_id` interface with arbitrary UNISOC devices.
+Each accepted ID must have a verified device profile describing the exact AT
+interface, endpoints, activation requests, timing, and ZLP behavior.
 
-    /dev/sprd-at -> ttyUSB0
+Read [CONTRIBUTING.md](CONTRIBUTING.md) and
+[docs/ADDING_DEVICES.md](docs/ADDING_DEVICES.md) before submitting an ID.
+Remove IMEI, ICCID, phone numbers, subscriber data, APNs, and credentials from
+all public logs.
 
-The exact ttyUSB number can vary; always prefer `/dev/sprd-at`.
+## Documentation
 
-Test:
+- [Architecture](docs/ARCHITECTURE.md)
+- [Supported-device evidence](docs/SUPPORTED_DEVICES.md)
+- [Hardware acceptance tests](docs/HARDWARE_TESTING.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Upstreaming](docs/UPSTREAMING.md)
 
-    sudo ./sprd-at-tty AT
+OpenWrt modules must be built in the matching OpenWrt build tree; never copy a
+Debian-built `.ko` into OpenWrt. Secure Boot systems must sign the DKMS module
+with a key trusted by the running kernel.
 
-or after installing the helper:
+## License
 
-    /usr/local/bin/sprd-at-tty AT
-
-## Manual build/install
-
-Build:
-
-    make
-
-Load without installing:
-
-    sudo modprobe usbserial
-    sudo insmod ./sprd_vcom.ko
-
-Reconnect the modem and test `/dev/sprd-at`.
-
-Permanent installation for the current kernel only:
-
-    sudo make install
-
-This copies:
-
-    /lib/modules/$(uname -r)/extra/sprd_vcom.ko
-    /etc/modules-load.d/sprd_vcom.conf
-    /etc/udev/rules.d/99-sprd-vcom.rules
-
-and runs `depmod` + `modprobe`.
-
-Important: a manually installed external module normally needs to be rebuilt
-after every kernel upgrade. DKMS avoids that.
-
-## Automatic loading at boot
-
-There are two mechanisms:
-
-1. The module contains a USB MODULE_DEVICE_TABLE alias for
-   `1782:000c MI_02`, so normal udev/kmod hotplug can automatically load it
-   when the modem appears.
-
-2. `sprd_vcom.conf` installs:
-
-       sprd_vcom
-
-   under `/etc/modules-load.d/`, causing systemd-modules-load to load it
-   during boot even before the modem is attached.
-
-Using both is intentional and harmless.
-
-## IMPORTANT: remove the old forced option binding
-
-Do not continue dynamically adding this device to the Linux `option` driver:
-
-    echo 1782 000c > /sys/bus/usb-serial/drivers/option1/new_id
-
-Remove any boot script or udev rule that does this.
-
-If `option` currently owns MI_02, either reboot/reconnect after installing
-`sprd_vcom`, or unbind it first.
-
-Example, using your previous USB topology:
-
-    echo '1-10.1:1.2' | sudo tee /sys/bus/usb/drivers/option/unbind
-
-Then:
-
-    sudo modprobe sprd_vcom
-
-The simplest clean test is to unplug/replug the modem.
-
-## Stable device path
-
-The included udev rule creates:
-
-    /dev/sprd-at
-
-for the tty owned by this driver.
-
-Use `/dev/sprd-at` instead of assuming `/dev/ttyUSB0`.
-
-## Test application
-
-Build:
-
-    gcc -O2 -Wall -Wextra sprd-at-tty.c -o sprd-at-tty
-
-Install:
-
-    sudo install -m 0755 sprd-at-tty /usr/local/bin/sprd-at-tty
-
-Examples:
-
-    sprd-at-tty AT
-    sprd-at-tty ATI
-    sprd-at-tty 'AT+COPS?' 'AT+CSQ'
-    sprd-at-tty 'AT+CEREG=2' 'AT+CEREG?'
-
-The tool opens `/dev/sprd-at`, which triggers the driver initialization,
-then sends all supplied commands during that one tty session.
-
-## Periodic AT queries
-
-Install the example poller:
-
-    sudo install -m 0755 sprd-cell-poll.sh /usr/local/sbin/sprd-cell-poll
-
-Optional systemd timer:
-
-    sudo cp sprd-cell-poll.service /etc/systemd/system/
-    sudo cp sprd-cell-poll.timer /etc/systemd/system/
-    sudo systemctl daemon-reload
-    sudo systemctl enable --now sprd-cell-poll.timer
-
-Default interval is 60 seconds.
-
-Check:
-
-    systemctl list-timers sprd-cell-poll.timer
-    journalctl -u sprd-cell-poll.service
-
-Change `OnUnitActiveSec=60s` in the timer if needed, then:
-
-    sudo systemctl daemon-reload
-    sudo systemctl restart sprd-cell-poll.timer
-
-## Useful LTE queries
-
-Standard commands:
-
-    AT+COPS?
-    AT+CSQ
-    AT+CEREG=2
-    AT+CEREG?
-    AT+CREG=2
-    AT+CREG?
-    AT+CGREG=2
-    AT+CGREG?
-
-For LTE, `AT+CEREG?` may provide TAC and E-UTRAN Cell ID.
-
-## Diagnostics
-
-Module loaded:
-
-    lsmod | grep sprd_vcom
-
-USB binding:
-
-    readlink -f /sys/bus/usb/devices/1-10.1:1.2/driver
-
-Expected driver path contains:
-
-    sprd_vcom
-
-Kernel messages:
-
-    dmesg | tail -100
-
-tty:
-
-    ls -l /dev/ttyUSB* /dev/sprd-at
-
-USB descriptor:
-
-    lsusb -t
-
-## Secure Boot
-
-On PCs with UEFI Secure Boot, the kernel can reject an unsigned external
-module with errors such as "Key was rejected by service".
-
-Use your distribution's DKMS/MOK module-signing workflow, or sign the module
-with a key trusted by the running kernel. Do not disable Secure Boot unless
-that is appropriate for your environment.
-
-## OpenWrt note
-
-Do not copy a `.ko` built on Debian into OpenWrt. OpenWrt kernel modules must
-be built against the exact OpenWrt kernel build tree/config and matching
-vermagic.
-
-For OpenWrt production integration, add `sprd_vcom.c` as a kmod package or
-patch it into `drivers/usb/serial/` and select the package in your firmware
-build.
-
-## Scope
-
-This driver only exposes the confirmed runtime AT interface. It has no
-Spreadtrum BSL/FDL firmware commands and does not bind the runtime DIAG
-interface.
+The project is licensed under GPL-2.0-only. See [LICENSE](LICENSE).

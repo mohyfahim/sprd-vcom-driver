@@ -1,5 +1,6 @@
+# SPDX-License-Identifier: GPL-2.0
 [Unit]
-Description=Periodic DWR-910M LTE registration query
+Description=Periodically query UNISOC modem registration information
 
 [Timer]
 OnBootSec=30s
