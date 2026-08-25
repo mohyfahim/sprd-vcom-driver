@@ -7,3 +7,4 @@
 *.symvers
 /.cache.mk
 /build/
+/dist/

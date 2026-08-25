@@ -50,11 +50,16 @@ make
 make check
 ```
 
-Useful targets include `module`, `tools`, `clean`, `install`,
-`dkms-install`, and `dkms-uninstall`. Override `KDIR` to build against another
-prepared kernel tree. `make install MODE=manual` installs for the current
-kernel only; use `MODE=modemmanager` for the opt-in profile. `DESTDIR` is
-supported for staged installation.
+Useful targets include `module`, `tools`, `clean`, `install`, `deb`,
+`deb-all`, `dkms-install`, and `dkms-uninstall`. Override `KDIR` to build
+against another prepared kernel tree. `make install MODE=manual` installs for
+the current kernel only; use `MODE=modemmanager` for the opt-in profile.
+`DESTDIR` is supported for staged installation.
+
+Exact-kernel Debian packages can be built for native amd64 and cross-compiled
+Orange Pi arm64 targets. See
+[Debian binary packages](docs/DEBIAN_PACKAGING.md) for prerequisites, build
+commands, validation, and pairwise installation instructions.
 
 The maintained standalone compatibility baseline is Linux 5.10 and newer.
 
@@ -106,6 +111,7 @@ all public logs.
 - [Architecture](docs/ARCHITECTURE.md)
 - [Supported-device evidence](docs/SUPPORTED_DEVICES.md)
 - [Hardware acceptance tests](docs/HARDWARE_TESTING.md)
+- [Debian binary packages](docs/DEBIAN_PACKAGING.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Upstreaming](docs/UPSTREAMING.md)
 

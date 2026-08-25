@@ -20,7 +20,10 @@ jobs:
         run: |
           make tools
           ./tests/run-tests.sh
-          shellcheck install-dkms.sh uninstall-dkms.sh examples/sprd-cell-poll.sh tests/run-tests.sh
+          shellcheck install-dkms.sh uninstall-dkms.sh \
+            examples/sprd-cell-poll.sh tests/run-tests.sh \
+            packaging/build-deb.sh packaging/build-deb-all.sh \
+            tests/test-deb-packages.sh
       - name: Sanitizer build
         run: |
           cc -std=c11 -O1 -g -Wall -Wextra -Werror \
@@ -117,3 +120,22 @@ jobs:
         run: |
           make -C kernel M="$GITHUB_WORKSPACE" LLVM=1 W=1 \
             KBUILD_MODPOST_WARN=1 modules
+
+  debian-package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install package build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential dpkg-dev kmod \
+            linux-headers-generic shellcheck
+      - name: Build and validate native packages
+        run: |
+          kdir=$(find /usr/src -maxdepth 1 -type d \
+            -name 'linux-headers-*-generic' | sort -V | tail -n 1)
+          test -n "$kdir"
+          make deb KDIR="$kdir"
+          make check-debs
+          shellcheck packaging/build-deb.sh packaging/build-deb-all.sh \
+            tests/test-deb-packages.sh

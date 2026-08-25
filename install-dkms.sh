@@ -84,14 +84,17 @@ install -D -m 0644 "$script_dir/packaging/udev/99-sprd-vcom.rules" \
 install -D -m 0644 \
 	"$script_dir/packaging/udev/$mode/78-mm-sprd-vcom.rules" \
 	/etc/udev/rules.d/78-mm-sprd-vcom.rules
+install -D -m 0644 \
+	"$script_dir/packaging/modules-load.d/sprd_vcom.conf" \
+	/etc/modules-load.d/sprd_vcom.conf
 
 # Remove files installed by pre-1.0 development snapshots.
 rm -f /etc/udev/rules.d/99-unisoc-at-ignore.rules
-rm -f /etc/modules-load.d/sprd_vcom.conf
 
 udevadm control --reload-rules || true
 depmod -a
 if [ "$load_module" = yes ]; then
+	modprobe usbserial
 	modprobe sprd_vcom
 fi
 

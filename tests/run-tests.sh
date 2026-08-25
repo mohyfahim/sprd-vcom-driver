@@ -14,7 +14,10 @@ cc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror \
 python3 "$root/tests/test-at-client.py"
 
 for script in "$root/install-dkms.sh" "$root/uninstall-dkms.sh" \
-	"$root/examples/sprd-cell-poll.sh"; do
+	"$root/examples/sprd-cell-poll.sh" \
+	"$root/packaging/build-deb.sh" \
+	"$root/packaging/build-deb-all.sh" \
+	"$root/tests/test-deb-packages.sh"; do
 	sh -n "$script"
 done
 
@@ -41,7 +44,10 @@ fi
 
 if command -v shellcheck >/dev/null 2>&1; then
 	shellcheck "$root/install-dkms.sh" "$root/uninstall-dkms.sh" \
-		"$root/examples/sprd-cell-poll.sh" "$root/tests/run-tests.sh"
+		"$root/examples/sprd-cell-poll.sh" "$root/tests/run-tests.sh" \
+		"$root/packaging/build-deb.sh" \
+		"$root/packaging/build-deb-all.sh" \
+		"$root/tests/test-deb-packages.sh"
 fi
 
 echo "All local tests passed."

@@ -14,10 +14,15 @@ DESTDIR ?=
 PREFIX ?= /usr/local
 MODULE_DIR ?= /lib/modules/$(KERNEL_RELEASE)/extra
 UDEV_RULES_DIR ?= /etc/udev/rules.d
+MODULES_LOAD_DIR ?= /etc/modules-load.d
 MODE ?= manual
+DEB_OUTPUT_DIR ?= $(CURDIR)/dist
+DEB_REVISION ?= 1
+ARM64_CROSS_COMPILE ?= aarch64-linux-gnu-
 
 .PHONY: all module tools check clean install uninstall
 .PHONY: dkms-install dkms-uninstall
+.PHONY: deb deb-all check-debs
 
 all: module tools
 
@@ -51,11 +56,13 @@ install: all
 		$(DESTDIR)$(UDEV_RULES_DIR)/99-sprd-vcom.rules
 	install -D -m 0644 packaging/udev/$(MODE)/78-mm-sprd-vcom.rules \
 		$(DESTDIR)$(UDEV_RULES_DIR)/78-mm-sprd-vcom.rules
+	install -D -m 0644 packaging/modules-load.d/sprd_vcom.conf \
+		$(DESTDIR)$(MODULES_LOAD_DIR)/sprd_vcom.conf
 	@if [ -z "$(DESTDIR)" ]; then \
-		rm -f /etc/udev/rules.d/99-unisoc-at-ignore.rules \
-			/etc/modules-load.d/sprd_vcom.conf; \
+		rm -f /etc/udev/rules.d/99-unisoc-at-ignore.rules; \
 		depmod -a "$(KERNEL_RELEASE)"; \
 		udevadm control --reload-rules || true; \
+		modprobe usbserial; \
 		modprobe sprd_vcom; \
 	fi
 
@@ -78,5 +85,22 @@ dkms-install:
 
 dkms-uninstall:
 	./uninstall-dkms.sh
+
+deb:
+	KDIR="$(KDIR)" ARCH="$(ARCH)" CROSS_COMPILE="$(CROSS_COMPILE)" \
+		DEB_OUTPUT_DIR="$(DEB_OUTPUT_DIR)" DEB_REVISION="$(DEB_REVISION)" \
+		./packaging/build-deb.sh
+
+deb-all:
+	@test -n "$(ARM64_KDIR)" || { \
+		echo "ARM64_KDIR is required" >&2; exit 2; \
+	}
+	NATIVE_KDIR="$(KDIR)" ARM64_KDIR="$(ARM64_KDIR)" \
+		ARM64_CROSS_COMPILE="$(ARM64_CROSS_COMPILE)" \
+		DEB_OUTPUT_DIR="$(DEB_OUTPUT_DIR)" DEB_REVISION="$(DEB_REVISION)" \
+		./packaging/build-deb-all.sh
+
+check-debs:
+	./tests/test-deb-packages.sh "$(DEB_OUTPUT_DIR)"
 
 endif
